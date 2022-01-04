@@ -294,11 +294,11 @@ func (a *arm64) SubtractReg(dest, src Reg) {
 }
 
 func (a *arm64) MultiplyImm(dest, src Reg, value int, temp Reg) {
-	a.check(dest)
 	a.check(src)
 	a.MoveImm(temp, value)
 	a.insn("mul", a.reg(dest), a.reg(src), a.reg(temp))
 	a.Set(dest)
+	a.Set(temp.As(""))
 }
 
 func (a *arm64) AndImm(dest Reg, value int) {
