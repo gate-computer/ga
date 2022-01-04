@@ -59,12 +59,24 @@ type Assembly struct {
 
 func NewAssembly(arch Arch, sys *System) *Assembly {
 	buf := new(buffer)
-	return &Assembly{
+	a := &Assembly{
 		Arch:         arch,
 		ArchAssembly: arch.newAssembly(sys, buf),
 		System:       sys,
 		buffer:       buf,
 	}
+	a.Reset()
+	return a
+}
+
+func (a *Assembly) Reset(regs ...Reg) {
+	for i := range a.regUsage {
+		a.regUsage[i] = ""
+	}
+	for _, r := range regs {
+		a.Set(r)
+	}
+	a.Set(a.StackPtr)
 }
 
 func (a *Assembly) String() string {
@@ -72,6 +84,7 @@ func (a *Assembly) String() string {
 }
 
 type ArchAssembly interface {
+	Set(Reg)
 	Label(name string)
 	FunctionEpilogue()
 	Function(name string)
@@ -114,6 +127,17 @@ type ArchAssembly interface {
 
 type buffer struct {
 	bytes.Buffer
+	regUsage [32]string
+}
+
+func (b *buffer) checkUsage(reg uint8, use string) {
+	switch existing := b.regUsage[reg]; existing {
+	case use:
+	case "":
+		panic(fmt.Sprintf("register #%d (%s) not in use", reg, use))
+	default:
+		panic(fmt.Sprintf("existing register #%d (%s) usage: %s", reg, use, existing))
+	}
 }
 
 func (b *buffer) label(name string) {

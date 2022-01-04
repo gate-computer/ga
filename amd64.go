@@ -199,6 +199,14 @@ type amd64 struct {
 	*buffer
 }
 
+func (a *amd64) check(r Reg) {
+	a.checkUsage(uint8(r.AMD64), r.Use)
+}
+
+func (a *amd64) Set(r Reg) {
+	a.buffer.regUsage[r.AMD64] = r.Use
+}
+
 func (a *amd64) Label(name string) {
 	if global(name) {
 		a.printf("")
@@ -245,10 +253,12 @@ func (a *amd64) ReturnWithoutEpilogue() {
 
 func (a *amd64) Address(dest Reg, name string) {
 	a.insnf("lea %s, [rip + %s]", a.reg(dest), symbol(name))
+	a.Set(dest)
 }
 
 func (a *amd64) MoveDef(dest Reg, name string) {
 	a.insnf("mov %s, %s", a.reg(dest), symbol(name))
+	a.Set(dest)
 }
 
 func (a *amd64) MoveImm(dest Reg, value int) {
@@ -260,6 +270,7 @@ func (a *amd64) MoveImm(dest Reg, value int) {
 	default:
 		a.insn("mov", a.reg(dest), a.imm(value))
 	}
+	a.Set(dest)
 }
 
 func (a *amd64) MoveImm64(dest Reg, value uint64) {
@@ -271,24 +282,28 @@ func (a *amd64) MoveImm64(dest Reg, value uint64) {
 	default:
 		a.insn("mov", a.reg(dest), a.imm64(value))
 	}
+	a.Set(dest)
 }
 
 func (a *amd64) MoveReg(dest, src Reg) {
-	if dest == src {
-		return
+	a.check(src)
+	if !dest.Is(src) {
+		a.insn("mov", a.reg(dest), a.reg(src))
 	}
-	a.insn("mov", a.reg(dest), a.reg(src))
+	a.Set(dest)
 }
 
 func (a *amd64) MoveRegFloat(dest Reg, src FloatReg) {
 	a.insn("movq", a.reg(dest), a.floatreg(src))
+	a.Set(dest)
 }
 
 func (a *amd64) AddImm(dest, src Reg, value int) {
+	a.check(src)
 	switch {
 	case value == 0:
 		a.MoveReg(dest, src)
-	case dest == src:
+	case dest.Is(src):
 		a.insn("add", a.reg(dest), a.imm(value))
 	case value > 0:
 		a.insnf("lea %s, [%s + %s]", a.reg(dest), a.reg(src), a.imm(value))
@@ -296,35 +311,48 @@ func (a *amd64) AddImm(dest, src Reg, value int) {
 		a.insn("mov", a.reg(dest), a.reg(src))
 		a.insn("add", a.reg(dest), a.imm(value))
 	}
+	a.Set(dest)
 }
 
 func (a *amd64) AddReg(dest, src1, src2 Reg) {
+	a.check(src1)
+	a.check(src2)
 	switch {
-	case dest == src1:
+	case dest.Is(src1):
 		a.insn("add", a.reg(dest), a.reg(src2))
-	case dest == src2:
+	case dest.Is(src2):
 		a.insn("add", a.reg(dest), a.reg(src1))
 	default:
 		a.insnf("lea %s, [%s + %s]", a.reg(dest), a.reg(src1), a.reg(src2))
 	}
+	a.Set(dest)
 }
 
 func (a *amd64) SubtractImm(dest Reg, value int) {
-	if value == 0 {
-		return
+	a.check(dest)
+	if value != 0 {
+		a.insn("sub", a.reg(dest), a.imm(value))
 	}
-	a.insn("sub", a.reg(dest), a.imm(value))
+	a.Set(dest)
 }
 
 func (a *amd64) SubtractReg(dest, src Reg) {
+	a.check(dest)
+	a.check(src)
 	a.insn("sub", a.reg(dest), a.reg(src))
+	a.Set(dest)
 }
 
 func (a *amd64) MultiplyImm(dest, src Reg, value int, temp Reg) {
+	a.check(dest)
+	a.check(src)
+	a.Set(temp)
 	a.insn("imul", a.reg(dest), a.reg(src), a.imm(value))
+	a.Set(dest)
 }
 
 func (a *amd64) AndImm(dest Reg, value int) {
+	a.check(dest)
 	switch {
 	case value == 0:
 		a.insn("xor", a.reg4(dest), a.reg4(dest))
@@ -333,28 +361,39 @@ func (a *amd64) AndImm(dest Reg, value int) {
 	default:
 		a.insn("and", a.reg(dest), a.imm(value))
 	}
+	a.Set(dest)
 }
 
 func (a *amd64) AndReg(dest, src Reg) {
+	a.check(dest)
+	a.check(src)
 	a.insn("and", a.reg(dest), a.reg(src))
+	a.Set(dest)
 }
 
 func (a *amd64) OrImm(dest Reg, value int) {
+	a.check(dest)
 	a.insn("or", a.reg(dest), a.imm(value))
+	a.Set(dest)
 }
 
 func (a *amd64) OrReg(dest, src Reg) {
+	a.check(dest)
+	a.check(src)
 	a.insn("or", a.reg(dest), a.reg(src))
+	a.Set(dest)
 }
 
 func (a *amd64) ShiftImm(s Shift, r Reg, count int) {
-	if count == 0 {
-		return
+	a.check(r)
+	if count != 0 {
+		a.insn(a.shift(s), a.reg(r), a.imm(count))
 	}
-	a.insn(a.shift(s), a.reg(r), a.imm(count))
+	a.Set(r)
 }
 
 func (a *amd64) Load(dest, base Reg, offset int) {
+	a.check(base)
 	switch {
 	case offset == 0:
 		a.insnf("mov %s, [%s]", a.reg(dest), a.reg(base))
@@ -363,9 +402,11 @@ func (a *amd64) Load(dest, base Reg, offset int) {
 	default:
 		a.insnf("mov %s, [%s - %d]", a.reg(dest), a.reg(base), -offset)
 	}
+	a.Set(dest)
 }
 
 func (a *amd64) Load4Bytes(dest, base Reg, offset int) {
+	a.check(base)
 	switch {
 	case offset == 0:
 		a.insnf("mov %s, [%s]", a.reg4(dest), a.reg(base))
@@ -374,9 +415,11 @@ func (a *amd64) Load4Bytes(dest, base Reg, offset int) {
 	default:
 		a.insnf("mov %s, [%s - %d]", a.reg4(dest), a.reg(base), -offset)
 	}
+	a.Set(dest)
 }
 
 func (a *amd64) LoadByte(dest, base Reg, offset int) {
+	a.check(base)
 	switch {
 	case offset == 0:
 		a.insnf("mov %s, [%s]", a.reg1(dest), a.reg(base))
@@ -385,9 +428,12 @@ func (a *amd64) LoadByte(dest, base Reg, offset int) {
 	default:
 		a.insnf("mov %s, [%s - %d]", a.reg1(dest), a.reg(base), -offset)
 	}
+	a.Set(dest)
 }
 
 func (a *amd64) Store(base Reg, offset int, src Reg) {
+	a.check(base)
+	a.check(src)
 	switch {
 	case offset == 0:
 		a.insnf("mov [%s], %s", a.reg(base), a.reg(src))
@@ -399,6 +445,8 @@ func (a *amd64) Store(base Reg, offset int, src Reg) {
 }
 
 func (a *amd64) Store4Bytes(base Reg, offset int, src Reg) {
+	a.check(base)
+	a.check(src)
 	switch {
 	case offset == 0:
 		a.insnf("mov [%s], %s", a.reg(base), a.reg4(src))
@@ -410,11 +458,13 @@ func (a *amd64) Store4Bytes(base Reg, offset int, src Reg) {
 }
 
 func (a *amd64) Push(r Reg) {
+	a.check(r)
 	a.insn("push", a.reg(r))
 }
 
 func (a *amd64) Pop(r Reg) {
 	a.insn("pop", a.reg(r))
+	a.Set(r)
 }
 
 func (a *amd64) Jump(name string) {
@@ -422,6 +472,7 @@ func (a *amd64) Jump(name string) {
 }
 
 func (a *amd64) JumpRegRoutine(r Reg, internalNamePrefix string) {
+	a.check(r)
 	a.Call(internalNamePrefix + "_setup")
 
 	a.label(internalNamePrefix + "_capture")
@@ -435,6 +486,7 @@ func (a *amd64) JumpRegRoutine(r Reg, internalNamePrefix string) {
 }
 
 func (a *amd64) JumpIfBitSet(r Reg, bit uint, name string) {
+	a.check(r)
 	switch {
 	case bit < 31:
 		a.insn("test", a.reg4(r), a.imm(1<<bit))
@@ -445,6 +497,7 @@ func (a *amd64) JumpIfBitSet(r Reg, bit uint, name string) {
 }
 
 func (a *amd64) JumpIfBitNotSet(r Reg, bit uint, name string) {
+	a.check(r)
 	switch {
 	case bit < 31:
 		a.insn("test", a.reg4(r), a.imm(1<<bit))
@@ -455,6 +508,7 @@ func (a *amd64) JumpIfBitNotSet(r Reg, bit uint, name string) {
 }
 
 func (a *amd64) JumpIfImm(c Cond, r Reg, value int, name string) {
+	a.check(r)
 	switch {
 	case value == 0 && (c == EQ || c == NE):
 		a.insn("test", a.reg(r), a.reg(r))
@@ -465,6 +519,8 @@ func (a *amd64) JumpIfImm(c Cond, r Reg, value int, name string) {
 }
 
 func (a *amd64) JumpIfReg(c Cond, dest, src Reg, name string) {
+	a.check(dest)
+	a.check(src)
 	a.insn("cmp", a.reg(dest), a.reg(src))
 	a.insn("j"+a.cond(c), symbol(name))
 }
@@ -476,6 +532,7 @@ func (a *amd64) Call(name string) {
 func (a *amd64) Syscall(nr Syscall) {
 	a.MoveImm(a.SyscallNr, nr.AMD64)
 	a.insn("syscall")
+	a.Set(a.SysResult)
 }
 
 func (a *amd64) Unreachable() {

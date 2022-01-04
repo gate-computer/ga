@@ -14,6 +14,20 @@ type Specific struct {
 type Reg struct {
 	AMD64 RegAMD64
 	ARM64 RegARM64
+	Use   string
+}
+
+// As returns the same register with different usage.
+func (r Reg) As(use string) Reg {
+	r.Use = use
+	return r
+}
+
+// Is same register?  Usage is ignored.
+func (r Reg) Is(other Reg) bool {
+	r.Use = ""
+	other.Use = ""
+	return r == other
 }
 
 // Syscall number per CPU architecture.

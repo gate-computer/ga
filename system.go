@@ -15,11 +15,25 @@ type System struct {
 
 func Linux() *System {
 	return &System{
-		StackPtr:  Reg{RSP, XSP},
-		SyscallNr: Reg{RAX, X8},
-		SysParams: []Reg{{RDI, X0}, {RSI, X1}, {RDX, X2}, {R10, X3}, {R8, X4}, {R9, X5}},
-		SysResult: Reg{RAX, X0},
-		LibParams: []Reg{{RDI, X0}, {RSI, X1}, {RDX, X2}, {RCX, X3}, {R8, X4}, {R9, X5}},
-		LibResult: Reg{RAX, X0},
+		StackPtr:  Reg{RSP, XSP, "stack"},
+		SyscallNr: Reg{RAX, X8, "syscall"},
+		SysParams: []Reg{
+			{RDI, X0, "sysparam0"},
+			{RSI, X1, "sysparam1"},
+			{RDX, X2, "sysparam2"},
+			{R10, X3, "sysparam3"},
+			{R8, X4, "sysparam4"},
+			{R9, X5, "sysparam5"},
+		},
+		SysResult: Reg{RAX, X0, "sysresult"},
+		LibParams: []Reg{
+			{RDI, X0, "libparam0"},
+			{RSI, X1, "libparam1"},
+			{RDX, X2, "libparam2"},
+			{RCX, X3, "libparam3"},
+			{R8, X4, "libparam4"},
+			{R9, X5, "libparam5"},
+		},
+		LibResult: Reg{RAX, X0, "libresult"},
 	}
 }
