@@ -287,7 +287,7 @@ func (a *amd64) MoveImm64(dest Reg, value uint64) {
 
 func (a *amd64) MoveReg(dest, src Reg) {
 	a.check(src)
-	if !dest.Is(src) {
+	if a.reg(dest) != a.reg(src) {
 		a.insn("mov", a.reg(dest), a.reg(src))
 	}
 	a.Set(dest)
@@ -303,7 +303,7 @@ func (a *amd64) AddImm(dest, src Reg, value int) {
 	switch {
 	case value == 0:
 		a.MoveReg(dest, src)
-	case dest.Is(src):
+	case a.reg(dest) == a.reg(src):
 		a.insn("add", a.reg(dest), a.imm(value))
 	case value > 0:
 		a.insnf("lea %s, [%s + %s]", a.reg(dest), a.reg(src), a.imm(value))
@@ -318,9 +318,9 @@ func (a *amd64) AddReg(dest, src1, src2 Reg) {
 	a.check(src1)
 	a.check(src2)
 	switch {
-	case dest.Is(src1):
+	case a.reg(dest) == a.reg(src1):
 		a.insn("add", a.reg(dest), a.reg(src2))
-	case dest.Is(src2):
+	case a.reg(dest) == a.reg(src2):
 		a.insn("add", a.reg(dest), a.reg(src1))
 	default:
 		a.insnf("lea %s, [%s + %s]", a.reg(dest), a.reg(src1), a.reg(src2))

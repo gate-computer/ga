@@ -23,13 +23,6 @@ func (r Reg) As(use string) Reg {
 	return r
 }
 
-// Is same register?  Usage is ignored.
-func (r Reg) Is(other Reg) bool {
-	r.Use = ""
-	other.Use = ""
-	return r == other
-}
-
 // Syscall number per CPU architecture.
 type Syscall Specific
 

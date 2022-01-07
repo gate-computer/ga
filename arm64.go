@@ -254,7 +254,7 @@ func (a *arm64) MoveImm64(dest Reg, value uint64) {
 
 func (a *arm64) MoveReg(dest, src Reg) {
 	a.check(src)
-	if !dest.Is(src) {
+	if a.reg(dest) != a.reg(src) {
 		a.insn("mov", a.reg(dest), a.reg(src))
 	}
 	a.Set(dest)
