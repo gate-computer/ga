@@ -43,12 +43,8 @@ const (
 	X27
 	X28
 	X29
-	X30
-	X31
-
-	XLR = X30
-	XSP = X31
-	XZR = X31
+	XLR
+	XSP
 )
 
 func (r RegARM64) String() string {
@@ -56,18 +52,22 @@ func (r RegARM64) String() string {
 }
 
 func (r RegARM64) reg() string {
-	if r < 32 {
+	if r == 31 {
+		return "sp"
+	}
+	if r < 31 {
 		return fmt.Sprintf("x%d", r)
 	}
-
 	panic(r)
 }
 
 func (r RegARM64) reg4() string {
-	if r < 32 {
+	if r == 31 {
+		return "sp"
+	}
+	if r < 31 {
 		return fmt.Sprintf("w%d", r)
 	}
-
 	panic(r)
 }
 
