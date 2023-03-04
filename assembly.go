@@ -44,10 +44,10 @@ func global(name string) bool {
 }
 
 func symbol(name string) string {
-	if global(name) {
-		return name
+	if !global(name) {
+		name = strings.Replace(name, ".", ".L", 1)
 	}
-	return strings.Replace(name, ".", ".L", 1)
+	return fmt.Sprintf("%q", name)
 }
 
 type Assembly struct {
