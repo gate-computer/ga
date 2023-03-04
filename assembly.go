@@ -79,6 +79,10 @@ func (a *Assembly) Reset(regs ...Reg) {
 	a.Set(a.StackPtr)
 }
 
+func (a *Assembly) Bytes() []byte {
+	return a.buffer.Bytes()
+}
+
 func (a *Assembly) String() string {
 	return a.buffer.String()
 }
